@@ -1,0 +1,9 @@
+node_modules
+public
+provisions
+coverage
+build
+docs
+db
+*.svg
+*.DS_Store
