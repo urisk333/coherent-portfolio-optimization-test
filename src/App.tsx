@@ -14,15 +14,6 @@ import ConstructPortfolio from "./pages/ConstructPortfolio";
 import { WasmRunner } from "@coherentglobal/wasm-runner";
 import { SERVICE_ID } from "./constants/constants";
 
-export const AUTH_HEADERS = {
-    Accept: "application/json",
-    "x-synthetic-key": process.env.REACT_APP_SPARK_SECRET_KEY,
-    "x-tenant-name": process.env.REACT_APP_SPARK_TENANT,
-    "Content-Type": "application/json"
-};
-
-export const SPARK_URL = process.env.REACT_APP_SPARK_URL;
-
 function App() {
     const [runner, setRunner] = useState<null | WasmRunner>(null);
 
