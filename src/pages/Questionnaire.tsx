@@ -9,13 +9,12 @@ import Header from "../components/Header/Header";
 import { useDispatch } from "react-redux";
 import InputField, { ErrorMessageProps } from "../components/InputField";
 import RadioField from "../components/RadioField";
-import { AUTH_HEADERS, SPARK_URL } from "../App";
-import axios, { AxiosResponse } from "axios";
 import { AppDispatch } from "../store";
-import { setQuestionnaireData } from "../store/questionnaireResults";
+import { IRequestData, IRequestMeta, setQuestionnaireData } from "../store/questionnaireResults";
 import FundSelection, { IFundsProps, INewObjectProps } from "./FundSelection";
 import Loader from "../components/Loader/Loader";
 import { WasmRunner } from "@coherentglobal/wasm-runner";
+import { SERVICE_ID } from "../constants/constants";
 
 export interface QuestionnaireTypes {
     Age: number;
@@ -51,10 +50,9 @@ export const pageCheck = (location: any) => ({
 
 export interface IRunnerProps {
     runner: null | WasmRunner;
-    initWasmRunner: () => void;
 }
 
-function Questionnaire({ runner, initWasmRunner }: IRunnerProps) {
+function Questionnaire({ runner }: IRunnerProps) {
     const { t } = useTranslation("common");
     const location = useLocation();
     const dispatch: AppDispatch = useDispatch();
@@ -77,38 +75,6 @@ function Questionnaire({ runner, initWasmRunner }: IRunnerProps) {
     const [isLangChanged, setIsLangChanged] = useState<boolean>(false);
 
     const { getRecommendation, ourRecimmendation, readOnly } = pageCheck(location);
-
-    // Checking an option to get metadata
-
-    const getMetadata = async () => {
-        const payload = {
-            request_data: {
-                inputs: {}
-            },
-            request_meta: {
-                service_category: "Metadata",
-                compiler_type: "Neuron",
-                version_id: "e8ba9e7e-169c-4752-8a8e-d6eb0c78cb01",
-                call_purpose: "Spark - API Tester",
-                source_system: "SPARK",
-                correlation_id: "",
-                requested_output: null
-            }
-        };
-        if (runner) {
-            return await runner.execute(payload).catch((err) => ({ error: err.v3 }));
-        } else {
-            await initWasmRunner();
-            throw Error("Runner not initialized. Please retry.");
-        }
-    };
-
-    useEffect(() => {
-        getMetadata();
-        // console.log("METADATA: ", getMetadata());
-    }, []);
-
-    // Close check
 
     const pageHeader = useMemo(() => {
         if (ourRecimmendation || readOnly) {
@@ -221,78 +187,75 @@ function Questionnaire({ runner, initWasmRunner }: IRunnerProps) {
 
     const checkForAgeValidation = async () => {
         setLoadingForInput(true);
-        return await axios
-            .request({
-                method: "POST",
-                url: SPARK_URL,
-                headers: AUTH_HEADERS,
-                data: {
-                    request_data: {
-                        inputs: {
-                            "calc.Age": +values.Age
-                        }
-                    },
-                    request_meta: {
-                        service_category: "calc",
-                        compiler_type: "Neuron"
-                    }
-                },
-                maxRedirects: 0
-            })
-            .then((response: AxiosResponse) => {
-                setLoadingForInput(false);
-                setErrors(response.data.response_data?.errors);
-            })
-            .catch((err: Error) => {
-                setLoadingForInput(false);
-                setErrors(undefined);
-                // console.log("ERROR: ", err);
-            });
+        const payload = {
+            request_data: {
+                inputs: {
+                    "calc.Age": +values.Age
+                }
+            },
+            request_meta: {
+                service_category: "calc",
+                compiler_type: "Neuron",
+                version_id: SERVICE_ID
+            }
+        };
+
+        try {
+            console.log("Running wasm", payload);
+            console.time("wasmCall");
+            const response = await runner?.execute(payload);
+            console.timeEnd("wasmCall");
+            console.log("Done running wasm", response);
+            setErrors(response?.response_data?.errors);
+        } catch (e) {
+            setErrors(undefined);
+            console.log("Error executing wasm", e);
+        } finally {
+            setLoadingForInput(false);
+        }
     };
 
     const questionnaireData = async () => {
-        return await axios
-            .request({
-                method: "POST",
-                url: SPARK_URL,
-                headers: AUTH_HEADERS,
-                data: {
-                    request_data: {
-                        inputs: {
-                            "calc.Age": +values.Age,
-                            "calc.SpouseQ": getFirstLetterOfResponse(SpouseQOption, values.SpouseQ),
-                            "calc.KidsQ": getFirstLetterOfResponse(KidsQOption, values.KidsQ),
-                            "calc.NewInvestorQ": getFirstLetterOfResponse(
-                                NewInvestorQOption,
-                                values.NewInvestorQ
-                            ),
-                            "calc.DownturnQ": getFirstLetterOfResponse(
-                                DownturnQOption,
-                                values.DownturnQ
-                            )
-                        }
-                    },
-                    request_meta: {
-                        service_category: "calc",
-                        compiler_type: "Neuron"
+        setLoading(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (runner?.execute) {
+            const payload = {
+                request_data: {
+                    inputs: {
+                        "calc.Age": +values.Age,
+                        "calc.SpouseQ": getFirstLetterOfResponse(SpouseQOption, values.SpouseQ),
+                        "calc.KidsQ": getFirstLetterOfResponse(KidsQOption, values.KidsQ),
+                        "calc.NewInvestorQ": getFirstLetterOfResponse(
+                            NewInvestorQOption,
+                            values.NewInvestorQ
+                        ),
+                        "calc.DownturnQ": getFirstLetterOfResponse(
+                            DownturnQOption,
+                            values.DownturnQ
+                        )
                     }
                 },
-                maxRedirects: 0
-            })
-            .then((response: AxiosResponse) => {
+                request_meta: {
+                    service_category: "calc",
+                    compiler_type: "Neuron",
+                    version_id: SERVICE_ID
+                }
+            };
+            try {
+                const { response_data, response_meta } = await runner.execute(payload);
                 setLoading(false);
                 dispatch(
                     setQuestionnaireData({
-                        request_data: response.data.response_data,
-                        request_meta: response.data.response_meta
+                        request_data: response_data as IRequestData,
+                        request_meta: response_meta as IRequestMeta
                     })
                 );
-                setOutputRisk(response.data.response_data.outputs["calc.Output_Risk"]);
-            })
-            .catch((err: Error) => {
+                setOutputRisk(response_data.outputs["calc.Output_Risk"]);
+            } catch (e) {
                 setLoading(false);
-                // console.log("ERROR: ", err);
-            });
+                console.log("Error executing wasm", e);
+            }
+        }
     };
 
     return (

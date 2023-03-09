@@ -23,7 +23,7 @@
     "linebreak-style": ["error", "unix"],
     "quotes": ["error", "double", { "allowTemplateLiterals": true }],
     "semi": ["error", "always"],
-    "no-console": ["error", { "allow": ["info", "error", "log"] }],
+    "no-console": ["error", { "allow": ["info", "error", "log", "time", "timeEnd"] }],
     "@typescript-eslint/no-empty-interface": "off",
     "@typescript-eslint/no-empty-function": ["error", { "allow": ["functions", "arrowFunctions"] }],
     "@typescript-eslint/no-explicit-any": "off",

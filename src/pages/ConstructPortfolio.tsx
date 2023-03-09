@@ -12,12 +12,11 @@ import { useNavigate } from "react-router-dom";
 import FundSelection, { IFundsProps, INewObjectProps } from "./FundSelection";
 import { setSelectedFundsData } from "../store/selectedFunds";
 import { AppDispatch } from "../store";
-import axios, { AxiosResponse } from "axios";
-import { AUTH_HEADERS, SPARK_URL } from "../App";
-import { setConstructData } from "../store/constructData";
-import { ThemeColorProps } from "./Questionnaire";
+import { IConstructData, IConstructMeta, setConstructData } from "../store/constructData";
+import { IRunnerProps, ThemeColorProps } from "./Questionnaire";
+import { SERVICE_ID } from "../constants/constants";
 
-const ConstructPortfolio = () => {
+const ConstructPortfolio = ({ runner }: IRunnerProps) => {
     const dispatch: AppDispatch = useDispatch();
     const { response_data } = useSelector((state: any) => state.optimization);
     const { request_data } = useSelector((state: any) => state.results);
@@ -292,9 +291,6 @@ const ConstructPortfolio = () => {
                     formatter={(value) => {
                         return `${value}%`;
                     }}
-                    // parser={(value) => {
-                    //     return value!.replace("%", "");
-                    // }}
                     value={value.Percentage || 0}
                     controls={false}
                 />
@@ -332,34 +328,35 @@ const ConstructPortfolio = () => {
             };
         });
 
-        return await axios
-            .request({
-                method: "POST",
-                url: SPARK_URL,
-                headers: AUTH_HEADERS,
-                data: {
-                    request_data: {
+        if (runner?.execute) {
+            const payload = {
+                request_data: {
+                    inputs: {
                         inputs: tempAllocations.reduce((obj, item) => Object.assign(obj, item), {})
-                    },
-                    request_meta: { service_category: "stat", compiler_type: "Neuron" }
+                    }
                 },
-                maxRedirects: 0
-            })
-            .then((response: AxiosResponse) => {
+                request_meta: {
+                    service_category: "stat",
+                    compiler_type: "Neuron",
+                    version_id: SERVICE_ID
+                }
+            };
+            try {
+                const { response_data, response_meta } = await runner.execute(payload);
                 setLoading(false);
                 setShowWarningModal(false);
                 dispatch(
                     setConstructData({
-                        construct_data: response.data.response_data,
-                        construct_meta: response.data.response_meta
+                        construct_data: response_data as IConstructData,
+                        construct_meta: response_meta as IConstructMeta
                     })
                 );
                 navigate("/results");
-            })
-            .catch((err: any) => {
+            } catch (e) {
                 setLoading(false);
-                // console.log("ERROR: ", err);
-            });
+                console.log("Error executing wasm", e);
+            }
+        }
     };
 
     return (

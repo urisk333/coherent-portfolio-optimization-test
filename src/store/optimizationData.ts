@@ -7,15 +7,7 @@ export interface IResponseData {
     service_chain: null;
 }
 
-interface IOutputs {
-    "Metadata.Language_Number": number;
-    // "Metadata.Input_Q3_Option": string;
-    // translations: ITranslations;
-}
-
-// interface ITranslations {
-//     en: object;
-// }
+interface IOutputs {}
 
 export interface IResponseMeta {
     service_id: string;

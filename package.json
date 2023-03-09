@@ -5,7 +5,7 @@
   "dependencies": {
     "@ant-design/icons": "^5.0.1",
     "@coherentglobal/explainer-lib": "^1.0.107",
-    "@coherentglobal/wasm-runner": "0.0.72",
+    "@coherentglobal/wasm-runner": "0.0.82",
     "@reduxjs/toolkit": "^1.9.1",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",

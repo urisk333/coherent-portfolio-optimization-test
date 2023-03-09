@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
-import axios, { AxiosResponse } from "axios";
 import { useDispatch } from "react-redux";
-import { setOptimizationData } from "./store/optimizationData";
+import { IResponseData, IResponseMeta, setOptimizationData } from "./store/optimizationData";
 import { AppDispatch } from "./store";
 import styled from "styled-components";
 import Questionnaire from "./pages/Questionnaire";
@@ -13,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import OptimizationResults from "./pages/OptimizationResults";
 import ConstructPortfolio from "./pages/ConstructPortfolio";
 import { WasmRunner } from "@coherentglobal/wasm-runner";
+import { SERVICE_ID } from "./constants/constants";
 
 export const AUTH_HEADERS = {
     Accept: "application/json",
@@ -28,51 +28,51 @@ function App() {
 
     const initWasmRunner = async () => {
         const param = {
-            id: "e8ba9e7e-169c-4752-8a8e-d6eb0c78cb01",
-            url: "https://excel.uat.us.coherent.global/agilno/api/v3/nodegen/public/getnodegenzipbyId/service/b96b7a7b-7e7c-4ed0-93ea-6d844b5ff0ab"
+            id: SERVICE_ID,
+            url: `https://excel.uat.us.coherent.global/agilno/api/v3/nodegen/public/getnodegenzipbyId/service/${SERVICE_ID}`
         };
         const wasmRunner = new WasmRunner(param);
         await wasmRunner.initialize();
         setRunner(wasmRunner);
     };
 
-    // Checking an option to get metadata
-
-    // const initWasmRunner = async () => {
-    //     const param = {
-    //         id: "e8ba9e7e-169c-4752-8a8e-d6eb0c78cb01",
-    //         url: "https://excel.uat.us.coherent.global/agilno/api/v3/nodegen/public/getnodegenzipbyId/service/b96b7a7b-7e7c-4ed0-93ea-6d844b5ff0ab"
-    //     };
-    //     const payload = {
-    //         request_data: {
-    //             inputs: {}
-    //         },
-    //         request_meta: {
-    //             service_category: "Metadata",
-    //             compiler_type: "Neuron",
-    //             version_id: "e8ba9e7e-169c-4752-8a8e-d6eb0c78cb01",
-    //             call_purpose: "Spark - API Tester",
-    //             source_system: "SPARK",
-    //             correlation_id: "",
-    //             requested_output: null
-    //         }
-    //     };
-    //     const wasmRunner = new WasmRunner(param);
-    //     await wasmRunner.initialize();
-    //     const response = await wasmRunner.execute(payload).catch((err) => {
-    //         console.log("ERR: ", err);
-    //         ({ error: err.v3 });
-    //     });
-    //     console.log("RES: ", response);
-    // };
-
-    // Close check
+    useEffect(() => {
+        const getMetadata = async () => {
+            if (runner?.execute) {
+                const payload = {
+                    request_data: {
+                        inputs: {}
+                    },
+                    request_meta: {
+                        service_category: "Metadata",
+                        compiler_type: "Neuron",
+                        version_id: SERVICE_ID
+                    }
+                };
+                try {
+                    const { response_data, response_meta } = await runner.execute(payload);
+                    dispatch(
+                        setOptimizationData({
+                            response_data: response_data as IResponseData,
+                            response_meta: response_meta as IResponseMeta
+                        })
+                    );
+                } catch (e) {
+                    console.log("Error executing wasm", e);
+                }
+            }
+        };
+        getMetadata();
+    }, [runner?.execute]);
 
     useEffect(() => {
         const init = async () => {
             await initWasmRunner();
         };
         init();
+        return () => {
+            setRunner(null);
+        };
     }, []);
 
     const dispatch: AppDispatch = useDispatch();
@@ -85,54 +85,20 @@ function App() {
         }
     }, [window.performance]);
 
-    const initData = async () => {
-        return await axios
-            .request({
-                method: "POST",
-                url: SPARK_URL,
-                headers: AUTH_HEADERS,
-                data: {
-                    data: {},
-                    request_meta: {
-                        service_category: "Metadata",
-                        compiler_type: "Neuron"
-                    }
-                }
-            })
-            .then((response: AxiosResponse) => {
-                dispatch(
-                    setOptimizationData({
-                        response_data: response.data.response_data,
-                        response_meta: response.data.response_meta
-                    })
-                );
-            })
-            .catch(
-                (err: any) => {}
-                // console.log("ERROR: ", err)
-            );
-    };
-
-    useEffect(() => {
-        initData();
-    }, []);
-
     return (
         <Container>
             <Routes>
                 <Route
                     path="/"
                     element={
-                        response_data?.outputs ? (
-                            <Questionnaire runner={runner} initWasmRunner={initWasmRunner} />
-                        ) : (
-                            <Loader />
-                        )
+                        response_data?.outputs ? <Questionnaire runner={runner} /> : <Loader />
                     }
                 />
                 <Route
                     path="/construct-portfolio"
-                    element={response_data?.outputs ? <ConstructPortfolio /> : <Loader />}
+                    element={
+                        response_data?.outputs ? <ConstructPortfolio runner={runner} /> : <Loader />
+                    }
                 />
                 <Route
                     path="/results"

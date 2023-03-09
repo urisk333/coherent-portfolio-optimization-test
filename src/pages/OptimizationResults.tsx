@@ -125,7 +125,7 @@ function OptimizationResults() {
 
             function getPercentage(temp: DataForComparison[] | any[], j: IFundsProps) {
                 return +(
-                    temp?.find((l: DataForComparison) => l.fund_id === j.Fund_ID).value * 100
+                    temp?.find((l: DataForComparison) => l.fund_id === j.Fund_ID)?.value * 100
                 ).toFixed(1);
             }
 
