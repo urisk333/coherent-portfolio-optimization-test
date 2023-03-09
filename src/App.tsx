@@ -20,7 +20,9 @@ function App() {
     const initWasmRunner = async () => {
         const param = {
             id: SERVICE_ID,
-            url: `https://excel.uat.us.coherent.global/agilno/api/v3/nodegen/public/getnodegenzipbyId/service/${SERVICE_ID}`
+            url: navigator.onLine
+                ? `https://excel.uat.us.coherent.global/agilno/api/v3/nodegen/public/getnodegenzipbyId/service/${SERVICE_ID}`
+                : "/e8ba9e7e-169c-4752-8a8e-d6eb0c78cb01 (2).zip"
         };
         const wasmRunner = new WasmRunner(param);
         await wasmRunner.initialize();
